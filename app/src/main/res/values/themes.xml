@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme: Compose draws the UI; this only needs to be a no-action-bar shell. -->
+    <style name="Theme.Findora" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- Splash: brand-blue window with the centered geometric F, no text. -->
+    <style name="Theme.Findora.Splash" parent="Theme.Findora">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">@color/brand_blue</item>
+        <item name="android:navigationBarColor">@color/brand_blue</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
