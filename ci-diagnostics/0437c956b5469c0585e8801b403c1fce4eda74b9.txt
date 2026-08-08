@@ -1,0 +1,12 @@
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:checkDebugAarMetadata FAILED
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':app:checkDebugAarMetadata'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:checkDebugAarMetadata'.
+Caused by: org.gradle.api.internal.artifacts.ivyservice.TypedResolveException: Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+Caused by: org.gradle.internal.resolve.ModuleVersionNotFoundException: Could not find com.vanniktech:android-image-cropper:4.3.2.
+===== UNIT TEST RESULTS (XML) =====
+(no test XML)
