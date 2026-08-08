@@ -1,0 +1,173 @@
+name: Release
+
+# Produces a SIGNED release APK + AAB. Runs unit tests first.
+#
+# Signing key resolution:
+#   - If the KEYSTORE_BASE64 secret is set, it is used (your stable upload key).
+#   - Otherwise a fresh keystore is generated IN THIS RUN so you still get SIGNED
+#     artifacts with zero setup. That generated keystore is saved as the
+#     "findora-generated-keystore" artifact — KEEP IT if you ever plan to publish
+#     to Google Play (Play requires every future update to use the SAME upload key).
+#
+# Trigger: push a tag `git tag v1.0.0 && git push origin v1.0.0`, or
+#          Actions tab -> "Release" -> Run workflow.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+jobs:
+  release:
+    name: Test, sign & publish release APK + AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          validate-wrappers: false
+
+      # Use the provided keystore secret, or generate one so the build always
+      # produces SIGNED artifacts. Signing values are exported to $GITHUB_ENV.
+      - name: Prepare signing keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          KS="$RUNNER_TEMP/findora-upload.jks"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Using keystore from repo secrets."
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$KS"
+            {
+              echo "SIGN_STORE_FILE=$KS"
+              echo "SIGN_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "SIGN_KEY_ALIAS=$KEY_ALIAS"
+              echo "SIGN_KEY_PASSWORD=$KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          elif [ -f keystore-backup/findora-upload.jks ]; then
+            echo "Using committed keystore-backup/findora-upload.jks (stable key)."
+            echo "::add-mask::findora-upload-2026"
+            cp keystore-backup/findora-upload.jks "$KS"
+            {
+              echo "SIGN_STORE_FILE=$KS"
+              echo "SIGN_STORE_PASSWORD=findora-upload-2026"
+              echo "SIGN_KEY_ALIAS=findora-upload"
+              echo "SIGN_KEY_PASSWORD=findora-upload-2026"
+            } >> "$GITHUB_ENV"
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No KEYSTORE_BASE64 secret; generating a fresh upload keystore for this run."
+            GEN_PASS="findora-$(date +%s)-$RANDOM"
+            GEN_ALIAS="findora-upload"
+            echo "::add-mask::$GEN_PASS"
+            keytool -genkeypair -v \
+              -keystore "$KS" \
+              -alias "$GEN_ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$GEN_PASS" -keypass "$GEN_PASS" \
+              -dname "CN=Findora, OU=BIT, O=BIT, L=City, ST=State, C=US"
+            mkdir -p generated-keystore
+            cp "$KS" generated-keystore/findora-upload.jks
+            base64 -w0 "$KS" > generated-keystore/findora-upload.jks.base64
+            {
+              echo "KEYSTORE_PASSWORD=$GEN_PASS"
+              echo "KEY_ALIAS=$GEN_ALIAS"
+              echo "KEY_PASSWORD=$GEN_PASS"
+              echo ""
+              echo "Add findora-upload.jks.base64 contents as the KEYSTORE_BASE64 secret,"
+              echo "then the four values above as KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD"
+              echo "so every future release reuses this SAME upload key."
+            } > generated-keystore/CREDENTIALS.txt
+            {
+              echo "SIGN_STORE_FILE=$KS"
+              echo "SIGN_STORE_PASSWORD=$GEN_PASS"
+              echo "SIGN_KEY_ALIAS=$GEN_ALIAS"
+              echo "SIGN_KEY_PASSWORD=$GEN_PASS"
+            } >> "$GITHUB_ENV"
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # GitHub Actions expressions can't do arithmetic, so compute in bash. The
+      # +1000 offset keeps this above the versionCode=1 local default.
+      - name: Compute version code
+        run: echo "VERSION_CODE=$((${{ github.run_number }} + 1000))" >> "$GITHUB_ENV"
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          gradle :app:testReleaseUnitTest --no-daemon --stacktrace --console=plain 2>&1 | tee release-build.log
+
+      - name: Build signed release AAB and APK
+        env:
+          KEYSTORE_FILE: ${{ env.SIGN_STORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ env.SIGN_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ env.SIGN_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ env.SIGN_KEY_PASSWORD }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          set -o pipefail
+          # Use the `gradle` binary from setup-gradle (like ci.yml). Memory comes
+          # from gradle.properties.
+          gradle :app:bundleRelease :app:assembleRelease \
+            --no-daemon --stacktrace --console=plain --max-workers=2 2>&1 | tee -a release-build.log
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/bundle/release/*.aab dist/ 2>/dev/null || true
+          cp app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
+          ls -la dist
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: findora-release
+          path: dist/*
+          if-no-files-found: error
+
+      # Only present when the run generated its own key — keep it to reuse later.
+      - name: Upload generated keystore
+        if: steps.keystore.outputs.generated == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: findora-generated-keystore
+          path: generated-keystore/*
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload release build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build-log
+          path: release-build.log
+          if-no-files-found: warn
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

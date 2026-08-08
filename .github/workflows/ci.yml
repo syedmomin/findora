@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # allow the failure step to push the log to ci-diagnostics
+
+jobs:
+  build:
+    name: Test & build debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          validate-wrappers: false
+
+      # Use the `gradle` binary provided by setup-gradle (not ./gradlew). The build is
+      # split into granular steps so that if one fails, the failing task is obvious from
+      # the step name alone. Memory settings come from gradle.properties.
+      - name: Gradle version
+        run: gradle --version --no-daemon
+
+      - name: Compile debug (Kotlin + KSP)
+        run: |
+          set -o pipefail
+          gradle :app:compileDebugKotlin --no-daemon --stacktrace --console=plain 2>&1 | tee build.log
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          gradle :app:testDebugUnitTest --no-daemon --stacktrace --console=plain 2>&1 | tee -a build.log
+
+      - name: Assemble debug APK
+        run: |
+          set -o pipefail
+          gradle :app:assembleDebug --no-daemon --stacktrace --console=plain 2>&1 | tee -a build.log
+
+      # If anything above failed, publish the captured log to a diagnostics branch so it
+      # can be read via the public raw URL (Actions logs/artifacts need auth to download).
+      - name: Publish build log on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            grep -aE "e: |error:|> Task|FAILURE|Caused by|Execution failed|What went wrong|Unresolved|expected|mismatch" build.log
+            echo "===== UNIT TEST RESULTS (XML) ====="
+            cat app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null || echo "(no test XML)"
+          } | tail -c 300000 > errors.txt || true
+          CONTENT=$(base64 -w0 errors.txt)
+          curl -sS -X PUT \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/ci-diagnostics/${GITHUB_SHA}.txt" \
+            -d "{\"message\":\"CI diagnostics ${GITHUB_SHA} [skip ci]\",\"content\":\"${CONTENT}\",\"branch\":\"main\"}"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: findora-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload full build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: warn
+
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/

@@ -13,11 +13,27 @@ android {
         applicationId = "com.findora.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // CI overrides these (Play rejects duplicate versionCodes); fall back for local builds.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("VERSION_NAME") ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    // Optional release signing. In CI the keystore is materialized from a secret (or
+    // generated in-run) and these env vars are set; locally/without them the release
+    // build stays unsigned.
+    val keystorePath = System.getenv("KEYSTORE_FILE")
+    signingConfigs {
+        create("release") {
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -28,6 +44,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig =
+                if (!keystorePath.isNullOrBlank()) signingConfigs.getByName("release") else null
         }
     }
     compileOptions {
@@ -39,6 +57,9 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
     packaging {
         resources {

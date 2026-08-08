@@ -1,0 +1,209 @@
+name: Play Store AAB
+
+# One-click signed Android App Bundle (.aab) for Google Play.
+#
+# Signing key resolution:
+#   - If the KEYSTORE_BASE64 secret is set, it is used (your stable upload key).
+#   - Otherwise a fresh keystore is generated IN THIS RUN so you still get a
+#     signed .aab with zero setup. That generated keystore is saved as an
+#     artifact ("findora-generated-keystore") — KEEP IT: Play requires every
+#     future update to be signed with the SAME upload key. Add its values to
+#     repo Secrets after the first run so subsequent builds reuse it.
+#
+# Output artifact: "findora-release-aab"  ->  app-release.aab  (upload to Play Console)
+#
+# Trigger: Actions tab -> "Play Store AAB" -> Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play track (only used if auto-publish is configured)'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      status:
+        description: 'Release status on the track'
+        required: true
+        default: 'draft'
+        type: choice
+        options:
+          - draft
+          - completed
+
+permissions:
+  contents: read
+
+jobs:
+  aab:
+    name: Build signed AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          validate-wrappers: false
+
+      - name: Prepare signing keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          KS="$RUNNER_TEMP/findora-upload.jks"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Using keystore from repo secrets."
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$KS"
+            {
+              echo "SIGN_STORE_FILE=$KS"
+              echo "SIGN_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "SIGN_KEY_ALIAS=$KEY_ALIAS"
+              echo "SIGN_KEY_PASSWORD=$KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          elif [ -f keystore-backup/findora-upload.jks ]; then
+            echo "Using committed keystore-backup/findora-upload.jks (stable key)."
+            echo "::add-mask::findora-upload-2026"
+            cp keystore-backup/findora-upload.jks "$KS"
+            {
+              echo "SIGN_STORE_FILE=$KS"
+              echo "SIGN_STORE_PASSWORD=findora-upload-2026"
+              echo "SIGN_KEY_ALIAS=findora-upload"
+              echo "SIGN_KEY_PASSWORD=findora-upload-2026"
+            } >> "$GITHUB_ENV"
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No KEYSTORE_BASE64 secret; generating a fresh upload keystore for this run."
+            GEN_PASS="findora-$(date +%s)-$RANDOM"
+            GEN_ALIAS="findora-upload"
+            echo "::add-mask::$GEN_PASS"
+            keytool -genkeypair -v \
+              -keystore "$KS" \
+              -alias "$GEN_ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$GEN_PASS" -keypass "$GEN_PASS" \
+              -dname "CN=Findora, OU=BIT, O=BIT, L=City, ST=State, C=US"
+            mkdir -p generated-keystore
+            cp "$KS" generated-keystore/findora-upload.jks
+            base64 -w0 "$KS" > generated-keystore/findora-upload.jks.base64
+            {
+              echo "KEYSTORE_PASSWORD=$GEN_PASS"
+              echo "KEY_ALIAS=$GEN_ALIAS"
+              echo "KEY_PASSWORD=$GEN_PASS"
+              echo ""
+              echo "Add findora-upload.jks.base64 contents as the KEYSTORE_BASE64 secret,"
+              echo "then the four values above as KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD"
+              echo "so every future release reuses this SAME upload key."
+            } > generated-keystore/CREDENTIALS.txt
+            {
+              echo "SIGN_STORE_FILE=$KS"
+              echo "SIGN_STORE_PASSWORD=$GEN_PASS"
+              echo "SIGN_KEY_ALIAS=$GEN_ALIAS"
+              echo "SIGN_KEY_PASSWORD=$GEN_PASS"
+            } >> "$GITHUB_ENV"
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute version code
+        run: echo "VERSION_CODE=$((${{ github.run_number }} + 1000))" >> "$GITHUB_ENV"
+
+      - name: Build signed release AAB
+        env:
+          KEYSTORE_FILE: ${{ env.SIGN_STORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ env.SIGN_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ env.SIGN_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ env.SIGN_KEY_PASSWORD }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          set -o pipefail
+          gradle :app:bundleRelease \
+            --no-daemon --stacktrace --console=plain --max-workers=2 2>&1 | tee aab-build.log
+
+      - name: Locate AAB
+        id: aab
+        run: |
+          AAB=$(find app/build/outputs/bundle/release -name '*.aab' | head -n1)
+          if [ -z "$AAB" ]; then
+            echo "::error::No .aab produced."
+            exit 1
+          fi
+          echo "path=$AAB" >> "$GITHUB_OUTPUT"
+          echo "Built signed bundle:"
+          ls -la "$AAB"
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: findora-release-aab
+          path: ${{ steps.aab.outputs.path }}
+          if-no-files-found: error
+
+      - name: Upload generated keystore
+        if: steps.keystore.outputs.generated == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: findora-generated-keystore
+          path: generated-keystore/*
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aab-build-log
+          path: aab-build.log
+          if-no-files-found: warn
+
+      # Optional auto-publish to Play (needs PLAY_SERVICE_ACCOUNT_JSON secret AND
+      # a stable keystore in secrets). Skipped otherwise.
+      - name: Check for Play credentials
+        id: play
+        env:
+          SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$SA" ] && [ "${{ steps.keystore.outputs.generated }}" = "false" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Auto-publish skipped. Download the findora-release-aab artifact and upload it in Play Console."
+          fi
+
+      - name: Write service account file
+        if: steps.play.outputs.enabled == 'true'
+        run: |
+          cat > "$RUNNER_TEMP/play-sa.json" <<'EOF'
+          ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          EOF
+
+      - name: Upload to Google Play
+        if: steps.play.outputs.enabled == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: ${{ runner.temp }}/play-sa.json
+          packageName: com.findora.app
+          releaseFiles: ${{ steps.aab.outputs.path }}
+          track: ${{ inputs.track }}
+          status: ${{ inputs.status }}

@@ -79,6 +79,24 @@ Pure, deterministic logic is unit-tested (`app/src/test`):
 - `EntityExtractorTest` — email/phone/date/amount/invoice extraction + category guess
 - `SnippetTest` — snippet windowing and highlight ranges
 
+## Deployment (CI → signed APK + AAB)
+
+Everything builds in **GitHub Actions** — no local Java needed. See
+[`RELEASING.md`](RELEASING.md) for the full guide.
+
+- **CI** (`ci.yml`) — on push/PR: compile, run unit tests, produce a debug APK.
+- **Release** (`release.yml`) — on a `v*` tag or manual run: run tests, then build a
+  **signed** `app-release.apk` **and** `app-release.aab`, and attach both to a GitHub
+  Release. Signs with the committed stable key in `keystore-backup/` (or a repo secret).
+- **Play Store AAB** (`playstore.yml`) — manual: signed `.aab` for Play, with optional
+  auto-publish.
+- **Generate Upload Keystore** (`generate-keystore.yml`) — one-off cloud key generation.
+
+A real, working signing keystore already exists at `keystore-backup/findora-upload.jks`
+(PKCS12, alias `findora-upload`; credentials in `keystore-backup/CREDENTIALS.txt`), so
+release builds are signed out of the box. **Move it into repo Secrets and delete it
+from git if this repo is public** — see `keystore-backup/README.md`.
+
 ## Notes / next steps
 
 - **Fonts:** the spec calls for *Inter*. Drop the `.ttf` files into `res/font/` and

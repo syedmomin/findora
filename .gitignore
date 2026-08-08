@@ -9,3 +9,9 @@
 .cxx
 local.properties
 /app/build
+
+# Signing keystore + credentials — MUST NOT be in a public repo. Kept on disk only;
+# loaded into GitHub Actions Secrets instead.
+keystore-backup/*.jks
+keystore-backup/*.base64
+keystore-backup/CREDENTIALS.txt
