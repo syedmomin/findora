@@ -3,6 +3,7 @@ package com.findora.app.ui.screens.scanner
 import android.Manifest
 import android.net.Uri
 import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
@@ -193,7 +194,7 @@ private fun captureTo(
                 onCaptured(results.savedUri ?: Uri.fromFile(file))
             }
 
-            override fun onError(exception: ImageCapture.ImageCaptureException) {
+            override fun onError(exception: ImageCaptureException) {
                 // Surfacing camera errors is out of scope; the user can retry.
             }
         },

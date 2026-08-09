@@ -9,6 +9,7 @@ import com.findora.app.data.model.Document
 import com.findora.app.data.model.SearchResult
 import com.findora.app.data.ocr.OcrService
 import com.findora.app.data.search.EntityExtractor
+import com.findora.app.data.search.toSearchResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
