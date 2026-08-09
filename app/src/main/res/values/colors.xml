@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand_blue">#2563EB</color>
-    <color name="dark_navy">#0F172A</color>
+    <!-- Sampled from logo.png -->
+    <color name="brand_blue">#0B8FF0</color>
+    <color name="brand_blue_deep">#1E63E6</color>
+    <color name="brand_cyan">#09B7FD</color>
+    <color name="dark_navy">#0A1022</color>
+    <color name="splash_navy">#05102E</color>
     <color name="white">#FFFFFF</color>
-    <color name="ic_launcher_background">#2563EB</color>
+    <!-- Deep navy behind the logo's F on the launcher icon -->
+    <color name="ic_launcher_background">#05102E</color>
 </resources>

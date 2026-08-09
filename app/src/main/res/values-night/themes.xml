@@ -8,8 +8,8 @@
 
     <style name="Theme.Findora.Splash" parent="Theme.Findora">
         <item name="android:windowBackground">@drawable/splash_background</item>
-        <item name="android:statusBarColor">@color/brand_blue</item>
-        <item name="android:navigationBarColor">@color/brand_blue</item>
+        <item name="android:statusBarColor">@color/splash_navy</item>
+        <item name="android:navigationBarColor">@color/splash_navy</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

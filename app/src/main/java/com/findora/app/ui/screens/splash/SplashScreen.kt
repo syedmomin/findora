@@ -20,7 +20,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.findora.app.R
-import com.findora.app.ui.theme.RoyalBlue
+import com.findora.app.ui.theme.SplashNavy
 import kotlinx.coroutines.delay
 
 /** Brand-blue splash with the centered geometric F. Subtle scale + fade, no text. */
@@ -37,7 +37,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     }
 
     Box(
-        Modifier.fillMaxSize().background(RoyalBlue),
+        Modifier.fillMaxSize().background(SplashNavy),
         contentAlignment = Alignment.Center,
     ) {
         Image(
