@@ -45,9 +45,9 @@ class SearchViewModel(
         .distinctUntilChanged()
         .flatMapLatest { q ->
             if (q.isBlank()) {
-                flowOf(SearchUiState.Idle)
+                flowOf<SearchUiState>(SearchUiState.Idle)
             } else {
-                flow {
+                flow<SearchUiState> {
                     emit(SearchUiState.Searching)
                     emit(SearchUiState.Results(q, documents.search(q)))
                 }
