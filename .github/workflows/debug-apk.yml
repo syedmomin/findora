@@ -1,0 +1,65 @@
+name: Debug APK
+
+# APK-only build for phone testing. Signed with the standard Android debug key,
+# which is identical on every build — so debug APKs always install over each other
+# (no signature-mismatch "App not installed"). Published to a public "debug"
+# release for easy download. No AAB, no Play work.
+#
+# Trigger: Actions tab -> "Debug APK" -> Run workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          validate-wrappers: false
+
+      - name: Build debug APK
+        run: |
+          set -o pipefail
+          gradle :app:assembleDebug --no-daemon --stacktrace --console=plain 2>&1 | tee debug-build.log
+
+      - name: Stage APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/findora-debug.apk
+          ls -la dist
+
+      - name: Publish to "debug" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: debug
+          name: Findora (debug / test build)
+          prerelease: true
+          files: dist/findora-debug.apk
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-build-log
+          path: debug-build.log
+          if-no-files-found: warn
