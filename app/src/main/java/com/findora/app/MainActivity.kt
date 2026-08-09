@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.findora.app.data.repository.ThemeMode
+import com.findora.app.ui.components.FindoraBackground
 import com.findora.app.ui.navigation.FindoraApp
 import com.findora.app.ui.theme.FindoraTheme
 
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
             FindoraTheme(darkTheme = dark) {
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                FindoraBackground {
                     FindoraApp(themeMode = themeMode)
                 }
             }

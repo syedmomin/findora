@@ -1,6 +1,5 @@
 package com.findora.app.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,8 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,18 +33,13 @@ fun DocumentCard(
     snippet: String? = null,
     highlights: List<IntRange> = emptyList(),
 ) {
-    Card(
-        onClick = onClick,
+    GlassCard(
         modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
         shape = FindoraRadius.Card,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Thumbnail(document)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -59,11 +51,7 @@ fun DocumentCard(
                 )
                 Spacer(Modifier.size(4.dp))
                 if (snippet != null) {
-                    HighlightedText(
-                        text = snippet,
-                        highlights = highlights,
-                        maxLines = 2,
-                    )
+                    HighlightedText(text = snippet, highlights = highlights, maxLines = 2)
                 } else {
                     Text(
                         document.preview,
@@ -102,7 +90,7 @@ private fun Thumbnail(document: Document) {
             modifier = Modifier.size(52.dp).clip(shape),
         )
     } else {
-        Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.size(52.dp)) {
+        Surface(shape = shape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), modifier = Modifier.size(52.dp)) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     document.category.icon,

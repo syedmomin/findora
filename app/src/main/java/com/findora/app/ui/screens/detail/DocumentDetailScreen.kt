@@ -91,9 +91,13 @@ fun DocumentDetailScreen(
                         Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete))
                     }
                 },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                ),
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
     ) { padding ->
         val doc = document
         if (doc == null) {

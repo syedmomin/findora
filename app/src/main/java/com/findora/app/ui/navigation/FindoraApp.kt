@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -35,6 +36,7 @@ fun FindoraApp(
     val showBars = currentRoute in TopLevelTab.entries.map { it.route }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             AnimatedVisibility(
                 visible = showBars,
@@ -68,7 +70,10 @@ fun FindoraApp(
 
 @Composable
 private fun FindoraBottomBar(navController: NavHostController, currentRoute: String?) {
-    NavigationBar {
+    NavigationBar(
+        containerColor = com.findora.app.ui.theme.glassFill(),
+        tonalElevation = 0.dp,
+    ) {
         TopLevelTab.entries.forEach { tab ->
             val selected = currentRoute == tab.route
             NavigationBarItem(

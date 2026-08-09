@@ -46,8 +46,12 @@ fun CategoryScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                ),
             )
         },
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
     ) { padding ->
         val list = docs
         when {

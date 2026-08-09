@@ -71,9 +71,9 @@ fun FindoraSearchBar(
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedBorderColor = com.findora.app.ui.theme.glassBorderColor(),
+                focusedContainerColor = com.findora.app.ui.theme.glassFill(),
+                unfocusedContainerColor = com.findora.app.ui.theme.glassFill(),
             ),
         )
         // Transparent tap layer for read-only "button" mode.
