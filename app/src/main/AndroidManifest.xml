@@ -5,6 +5,12 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- ML Kit uses the unbundled OCR model, which Google Play services downloads
+         over the network on first scan. INTERNET is required for that download;
+         ACCESS_NETWORK_STATE lets it defer until connectivity is available. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:name=".FindoraApplication"
         android:allowBackup="true"
