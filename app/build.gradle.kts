@@ -26,15 +26,10 @@ android {
     // build stays unsigned.
     val keystorePath = System.getenv("KEYSTORE_FILE")
 
-    // Stable debug key. Without this, debug builds are signed with Android's
-    // auto-generated ~/.android/debug.keystore, which differs on every machine and
-    // on every ephemeral CI runner — so a new debug APK can't install over an
-    // existing one ("App not installed" / signature mismatch). Signing debug with
-    // the committed keystore makes every debug build (CI and Android Studio) share
-    // one key, so they always install over each other. Falls back to the default
-    // debug key if the committed keystore isn't present.
-    val stableDebugStore = rootProject.file("keystore-backup/findora-upload.jks")
-
+    // Debug builds use Android's standard auto-generated debug key (same as the
+    // other apps that install fine). We had briefly signed debug with the committed
+    // upload keystore, but that made Findora sign differently from those apps; the
+    // standard debug key is the most broadly installable choice for test builds.
     signingConfigs {
         create("release") {
             if (!keystorePath.isNullOrBlank()) {
@@ -42,14 +37,6 @@ android {
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD")
-            }
-        }
-        getByName("debug") {
-            if (stableDebugStore.exists()) {
-                storeFile = stableDebugStore
-                storePassword = "findora-upload-2026"
-                keyAlias = "findora-upload"
-                keyPassword = "findora-upload-2026"
             }
         }
     }
