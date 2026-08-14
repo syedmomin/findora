@@ -10,7 +10,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.findora.app"
+        // Play Console registered this app under com.syedmomin.findora. Note this is
+        // intentionally different from `namespace` (the code package) — Android allows
+        // that. Using a unique applicationId also makes the androidx-startup provider
+        // authority (${applicationId}.androidx-startup) unique, which Play requires.
+        applicationId = "com.syedmomin.findora"
         minSdk = 24
         targetSdk = 35
         // CI overrides these (Play rejects duplicate versionCodes); fall back for local builds.

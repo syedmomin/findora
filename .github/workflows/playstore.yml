@@ -203,7 +203,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: ${{ runner.temp }}/play-sa.json
-          packageName: com.findora.app
+          packageName: com.syedmomin.findora
           releaseFiles: ${{ steps.aab.outputs.path }}
           track: ${{ inputs.track }}
           status: ${{ inputs.status }}
