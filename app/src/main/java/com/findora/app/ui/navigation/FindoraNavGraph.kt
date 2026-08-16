@@ -59,7 +59,7 @@ fun FindoraNavGraph(
         composable(Routes.SEARCH) {
             SearchScreen(
                 onBack = { navController.popBackStack() },
-                onOpenDocument = { id -> navController.navigate(Routes.detail(id)) },
+                onOpenDocument = { id, query -> navController.navigate(Routes.detail(id, query)) },
             )
         }
 
@@ -94,10 +94,18 @@ fun FindoraNavGraph(
 
         composable(
             route = Routes.DETAIL,
-            arguments = listOf(navArgument("id") { type = NavType.LongType }),
+            arguments = listOf(
+                navArgument("id") { type = NavType.LongType },
+                navArgument("q") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
         ) { entry ->
             DocumentDetailScreen(
                 documentId = entry.arguments?.getLong("id") ?: -1L,
+                query = entry.arguments?.getString("q").orEmpty(),
                 onBack = { navController.popBackStack() },
             )
         }

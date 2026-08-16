@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -33,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,10 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,6 +57,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.findora.app.R
 import com.findora.app.data.model.Document
+import com.findora.app.data.search.highlightRanges
+import com.findora.app.ui.components.HighlightedText
 import com.findora.app.ui.util.formatRelativeTime
 import kotlinx.coroutines.launch
 
@@ -61,6 +67,7 @@ import kotlinx.coroutines.launch
 fun DocumentDetailScreen(
     documentId: Long,
     onBack: () -> Unit,
+    query: String = "",
     viewModel: DetailViewModel = viewModel(factory = DetailViewModel.provideFactory(documentId)),
 ) {
     val document by viewModel.document.collectAsStateWithLifecycle()
@@ -68,6 +75,7 @@ fun DocumentDetailScreen(
     val clipboard = LocalClipboardManager.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     var showRename by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
@@ -107,11 +115,35 @@ fun DocumentDetailScreen(
             return@Scaffold
         }
 
+        // Terms to highlight (present only when opened from search). Ranges are
+        // computed over the full recognized text; the effect below scrolls to the
+        // first hit once the text has been laid out.
+        val terms = remember(query) {
+            query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+        }
+        val ranges = remember(doc.ocrText, terms) {
+            if (terms.isEmpty()) emptyList() else highlightRanges(doc.ocrText, terms)
+        }
+        var textTopPx by remember { mutableStateOf(0f) }
+        var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+
+        LaunchedEffect(ranges, textLayout, textTopPx) {
+            val layout = textLayout
+            if (ranges.isNotEmpty() && layout != null && textTopPx > 0f) {
+                val len = layout.layoutInput.text.length
+                if (len > 0) {
+                    val box = layout.getBoundingBox(ranges.first().first.coerceIn(0, len - 1))
+                    val target = (textTopPx + box.top).toInt() - 140
+                    scrollState.animateScrollTo(target.coerceAtLeast(0))
+                }
+            }
+        }
+
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -160,10 +192,24 @@ fun DocumentDetailScreen(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                doc.ocrText.ifBlank { "No text was recognized in this document." },
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            if (ranges.isEmpty()) {
+                Text(
+                    doc.ocrText.ifBlank { "No text was recognized in this document." },
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.onGloballyPositioned { textTopPx = it.positionInParent().y },
+                )
+            } else {
+                ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
+                    HighlightedText(
+                        text = doc.ocrText,
+                        highlights = ranges,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onGloballyPositioned { textTopPx = it.positionInParent().y },
+                        onTextLayout = { textLayout = it },
+                    )
+                }
+            }
         }
     }
 

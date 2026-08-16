@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -20,6 +21,7 @@ fun HighlightedText(
     highlights: List<IntRange>,
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
 ) {
     val highlightColor = if (isSystemInDarkTheme()) HighlightDark else HighlightLight
     val annotated = buildAnnotatedString {
@@ -45,5 +47,6 @@ fun HighlightedText(
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         style = LocalTextStyle.current,
+        onTextLayout = onTextLayout,
     )
 }

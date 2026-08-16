@@ -24,16 +24,9 @@ fun Document.toSearchResult(terms: List<String>): SearchResult {
     val suffix = if (end < text.length) "…" else ""
     val snippet = prefix + text.substring(start, end).trim() + suffix
 
-    val snippetLower = snippet.lowercase()
-    val highlights = buildList {
-        for (term in loweredTerms) {
-            var idx = snippetLower.indexOf(term)
-            while (idx >= 0) {
-                add(idx until (idx + term.length))
-                idx = snippetLower.indexOf(term, idx + term.length)
-            }
-        }
-    }.sortedBy { it.first }
-
-    return SearchResult(document = this, snippet = snippet.ifBlank { preview }, highlights = highlights)
+    return SearchResult(
+        document = this,
+        snippet = snippet.ifBlank { preview },
+        highlights = highlightRanges(snippet, terms),
+    )
 }

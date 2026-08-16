@@ -43,7 +43,7 @@ import com.findora.app.ui.components.FindoraSearchBar
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
-    onOpenDocument: (Long) -> Unit,
+    onOpenDocument: (Long, String) -> Unit,
     viewModel: SearchViewModel = viewModel(factory = SearchViewModel.Factory),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -105,7 +105,7 @@ fun SearchScreen(
                                 onClick = {
                                     keyboard?.hide()
                                     viewModel.onSubmit()
-                                    onOpenDocument(result.document.id)
+                                    onOpenDocument(result.document.id, s.query)
                                 },
                             )
                         }

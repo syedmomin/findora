@@ -1,5 +1,6 @@
 package com.findora.app.ui.navigation
 
+import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Home
@@ -14,8 +15,10 @@ object Routes {
     const val CATEGORIES = "categories"
     const val SETTINGS = "settings"
 
-    const val DETAIL = "detail/{id}"
-    fun detail(id: Long) = "detail/$id"
+    // Optional `q` carries the search query so the detail screen can highlight it.
+    const val DETAIL = "detail/{id}?q={q}"
+    fun detail(id: Long, query: String = "") =
+        if (query.isBlank()) "detail/$id" else "detail/$id?q=${Uri.encode(query)}"
 
     const val CATEGORY = "category/{name}"
     fun category(name: String) = "category/$name"

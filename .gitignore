@@ -10,6 +10,9 @@
 local.properties
 /app/build
 
+# Locally downloaded build outputs (AAB/APK). Artifacts live in GitHub Actions.
+/dist
+
 # Signing keystore + credentials — MUST NOT be in a public repo. Kept on disk only;
 # loaded into GitHub Actions Secrets instead.
 keystore-backup/*.jks
