@@ -85,13 +85,9 @@ fun DocumentDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(document?.title ?: "", maxLines = 1) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            com.findora.app.ui.components.FindoraTopBar(
+                title = document?.title ?: "",
+                onBack = onBack,
                 actions = {
                     IconButton(onClick = { showRename = true }) {
                         Icon(Icons.Rounded.DriveFileRenameOutline, contentDescription = stringResource(R.string.rename))
@@ -100,9 +96,6 @@ fun DocumentDetailScreen(
                         Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete))
                     }
                 },
-                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                ),
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -228,40 +221,42 @@ fun DocumentDetailScreen(
         )
     }
     if (showDelete) {
-        AlertDialog(
-            onDismissRequest = { showDelete = false },
-            title = { Text(stringResource(R.string.delete_confirm_title)) },
-            text = { Text(stringResource(R.string.delete_confirm_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDelete = false
-                    viewModel.delete(onDeleted = onBack)
-                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
+        com.findora.app.ui.components.FindoraDialog(
+            onDismiss = { showDelete = false },
+            title = stringResource(R.string.delete_confirm_title),
+            confirmText = stringResource(R.string.delete),
+            onConfirm = {
+                showDelete = false
+                viewModel.delete(onDeleted = onBack)
             },
-            dismissButton = {
-                TextButton(onClick = { showDelete = false }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
+            dismissText = stringResource(R.string.cancel),
+            destructive = true,
+        ) {
+            Text(
+                stringResource(R.string.delete_confirm_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
 @Composable
 private fun RenameDialog(initial: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(initial) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.rename_document)) },
-        text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.save)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+    com.findora.app.ui.components.FindoraDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.rename_document),
+        confirmText = stringResource(R.string.save),
+        onConfirm = { onConfirm(text) },
+        dismissText = stringResource(R.string.cancel),
+    ) {
+        com.findora.app.ui.components.FindoraTextField(
+            value = text,
+            onValueChange = { text = it },
+            placeholder = stringResource(R.string.rename_document),
+        )
+    }
 }
 
 private fun shareDocument(context: android.content.Context, document: Document) {

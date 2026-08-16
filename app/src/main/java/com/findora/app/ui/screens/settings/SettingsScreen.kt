@@ -40,6 +40,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.findora.app.R
 import com.findora.app.data.repository.ThemeMode
+import com.findora.app.ui.components.FindoraDialog
+import com.findora.app.ui.components.GlassCard
+import com.findora.app.ui.theme.Spacing
 
 @Composable
 fun SettingsScreen(
@@ -97,66 +100,74 @@ fun SettingsScreen(
         )
     }
     if (showStorage) {
-        AlertDialog(
-            onDismissRequest = { showStorage = false },
-            title = { Text(stringResource(R.string.settings_storage)) },
-            text = { Text("$count documents stored on this device.\n\nYou can clear your recent search history below.") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.clearRecentSearches(); showStorage = false }) {
-                    Text("Clear search history")
-                }
-            },
-            dismissButton = { TextButton(onClick = { showStorage = false }) { Text(stringResource(R.string.cancel)) } },
-        )
+        FindoraDialog(
+            onDismiss = { showStorage = false },
+            title = stringResource(R.string.settings_storage),
+            confirmText = "Clear search history",
+            onConfirm = { viewModel.clearRecentSearches(); showStorage = false },
+            dismissText = stringResource(R.string.cancel),
+        ) {
+            Text(
+                "$count documents stored on this device.\n\nYou can clear your recent search history below.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
 @Composable
 private fun SettingsRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    GlassCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.md),
+        contentPadding = PaddingValues(Spacing.lg),
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.size(16.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.size(Spacing.lg))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
 
 @Composable
 private fun ThemeDialog(current: ThemeMode, onSelect: (ThemeMode) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_theme)) },
-        text = {
-            Column {
-                ThemeMode.entries.forEach { mode ->
-                    Row(
-                        Modifier.fillMaxWidth().selectable(selected = current == mode, onClick = { onSelect(mode) }).padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = current == mode, onClick = { onSelect(mode) })
-                        Spacer(Modifier.size(8.dp))
-                        Text(themeLabel(mode), style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
+    FindoraDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.settings_theme),
+        confirmText = "Done",
+        onConfirm = onDismiss,
+    ) {
+        ThemeMode.entries.forEach { mode ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .selectable(selected = current == mode, onClick = { onSelect(mode) })
+                    .padding(vertical = Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = current == mode, onClick = { onSelect(mode) })
+                Spacer(Modifier.size(Spacing.sm))
+                Text(themeLabel(mode), style = MaterialTheme.typography.bodyLarge)
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
+        }
+    }
 }
 
 @Composable
 private fun InfoDialog(title: String, body: String, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.SemiBold) },
-        text = { Text(body, style = MaterialTheme.typography.bodyMedium) },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } },
-    )
+    FindoraDialog(
+        onDismiss = onDismiss,
+        title = title,
+        confirmText = "OK",
+        onConfirm = onDismiss,
+    ) {
+        Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
