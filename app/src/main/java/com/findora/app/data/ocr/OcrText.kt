@@ -5,4 +5,8 @@ package com.findora.app.data.ocr
  * collapses runs of 3+ newlines into a single blank line, drops empty pages,
  * and separates the remaining pages with one blank line.
  */
-fun combinePages(pages: List<String>): String = ""
+fun combinePages(pages: List<String>): String =
+    pages
+        .map { it.trim().replace(Regex("\n{3,}"), "\n\n") }
+        .filter { it.isNotBlank() }
+        .joinToString("\n\n")

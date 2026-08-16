@@ -40,6 +40,19 @@ class ScannerViewModel(
         }
     }
 
+    /** Renders + OCRs every page of the picked [pdf], saves one document, emits Success(id). */
+    fun processPdf(pdf: Uri) {
+        if (_state.value is ScanState.Processing) return
+        _state.value = ScanState.Processing
+        viewModelScope.launch {
+            runCatching { documents.importPdfAndSave(pdf) }
+                .onSuccess { id -> _state.value = ScanState.Success(id) }
+                .onFailure { e ->
+                    _state.value = ScanState.Error(e.message ?: "Couldn't read text from that PDF.")
+                }
+        }
+    }
+
     fun dismissError() {
         if (_state.value is ScanState.Error) _state.value = ScanState.Idle
     }

@@ -1,6 +1,7 @@
 package com.findora.app.data
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.net.toUri
 import java.io.File
@@ -22,6 +23,13 @@ class ImageStore(private val appContext: Context) {
             requireNotNull(input) { "Cannot open source image: $source" }
             dest.outputStream().use { output -> input.copyTo(output) }
         }
+        dest.absolutePath
+    }
+
+    /** Saves a [bitmap] (e.g. a rendered PDF page) as a JPEG and returns its path. */
+    suspend fun persistBitmap(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+        val dest = File(dir, "${UUID.randomUUID()}.jpg")
+        dest.outputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out) }
         dest.absolutePath
     }
 

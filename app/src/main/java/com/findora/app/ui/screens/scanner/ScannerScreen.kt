@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.FlashOff
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -89,6 +90,10 @@ fun ScannerScreen(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri -> uri?.let { startCrop(it) } }
 
+    val pdfLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let { viewModel.processPdf(it) } }
+
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (cameraPermission.status.isGranted) {
             CameraLayer(
@@ -98,6 +103,7 @@ fun ScannerScreen(
                         androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                     )
                 },
+                onPickPdf = { pdfLauncher.launch(arrayOf("application/pdf")) },
                 onBack = onBack,
             )
         } else {
@@ -120,6 +126,7 @@ fun ScannerScreen(
 private fun CameraLayer(
     onCaptured: (Uri) -> Unit,
     onPickGallery: () -> Unit,
+    onPickPdf: () -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -174,7 +181,7 @@ private fun CameraLayer(
             CaptureButton {
                 captureTo(context, controller, onCaptured)
             }
-            Spacer(Modifier.size(48.dp)) // balance the row
+            OverlayIconButton(Icons.Rounded.PictureAsPdf, "Import PDF", onPickPdf)
         }
     }
 }

@@ -8,6 +8,8 @@ import com.findora.app.data.model.Category
 import com.findora.app.data.model.Document
 import com.findora.app.data.model.SearchResult
 import com.findora.app.data.ocr.OcrService
+import com.findora.app.data.ocr.PdfRasterizer
+import com.findora.app.data.ocr.combinePages
 import com.findora.app.data.search.EntityExtractor
 import com.findora.app.data.search.rankByRelevance
 import com.findora.app.data.search.toSearchResult
@@ -18,6 +20,7 @@ class DocumentRepository(
     private val dao: DocumentDao,
     private val ocr: OcrService,
     private val imageStore: ImageStore,
+    private val pdfRasterizer: PdfRasterizer,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
 
@@ -53,6 +56,28 @@ class DocumentRepository(
             imagePath = storedPath,
             ocrText = text,
             category = category.name,
+            createdAt = now(),
+        )
+        return dao.insert(entity, entities.asIndexString())
+    }
+
+    /**
+     * Renders each page of the PDF at [pdf], OCRs it, and stores the combined text
+     * as one document (with the first page kept as the thumbnail). Returns its id.
+     */
+    suspend fun importPdfAndSave(pdf: Uri): Long {
+        var firstPagePath: String? = null
+        val pageTexts = pdfRasterizer.mapPages(pdf) { index, bitmap ->
+            if (index == 0) firstPagePath = imageStore.persistBitmap(bitmap)
+            ocr.recognize(bitmap)
+        }
+        val text = combinePages(pageTexts)
+        val entities = EntityExtractor.extract(text)
+        val entity = DocumentEntity(
+            title = EntityExtractor.suggestTitle(text),
+            imagePath = firstPagePath,
+            ocrText = text,
+            category = EntityExtractor.guessCategory(text).name,
             createdAt = now(),
         )
         return dao.insert(entity, entities.asIndexString())
