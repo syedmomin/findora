@@ -1,0 +1,30 @@
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResValues FROM-CACHE
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources FROM-CACHE
+> Task :app:mergeDebugResources FROM-CACHE
+> Task :app:packageDebugResources FROM-CACHE
+> Task :app:parseDebugLocalResources FROM-CACHE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug FROM-CACHE
+> Task :app:processDebugMainManifest FROM-CACHE
+> Task :app:processDebugManifest FROM-CACHE
+> Task :app:processDebugManifestForPackage FROM-CACHE
+> Task :app:processDebugResources FROM-CACHE
+> Task :app:kspDebugKotlin
+> Task :app:compileDebugKotlin
+e: file:///home/runner/work/findora/findora/app/src/main/java/com/findora/app/ui/screens/detail/DocumentDetailScreen.kt:151:61 Unresolved reference 'positionInRoot'.
+e: file:///home/runner/work/findora/findora/app/src/main/java/com/findora/app/ui/screens/detail/DocumentDetailScreen.kt:205:79 Unresolved reference 'positionInRoot'.
+e: file:///home/runner/work/findora/findora/app/src/main/java/com/findora/app/ui/screens/detail/DocumentDetailScreen.kt:214:68 Unresolved reference 'positionInRoot'.
+> Task :app:compileDebugKotlin FAILED
+FAILURE: Build failed with an exception.
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
+Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+===== UNIT TEST RESULTS (XML) =====
+(no test XML)
