@@ -125,16 +125,21 @@ fun DocumentDetailScreen(
             if (terms.isEmpty()) emptyList() else highlightRanges(doc.ocrText, terms)
         }
         var textTopPx by remember { mutableStateOf(0f) }
+        var containerTopPx by remember { mutableStateOf(0f) }
         var textLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+        var didScrollToMatch by remember(documentId, query) { mutableStateOf(false) }
 
-        LaunchedEffect(ranges, textLayout, textTopPx) {
+        LaunchedEffect(ranges, textLayout, textTopPx, containerTopPx) {
             val layout = textLayout
-            if (ranges.isNotEmpty() && layout != null && textTopPx > 0f) {
+            if (!didScrollToMatch && ranges.isNotEmpty() && layout != null && textTopPx > 0f) {
                 val len = layout.layoutInput.text.length
                 if (len > 0) {
                     val box = layout.getBoundingBox(ranges.first().first.coerceIn(0, len - 1))
-                    val target = (textTopPx + box.top).toInt() - 140
-                    scrollState.animateScrollTo(target.coerceAtLeast(0))
+                    // Match offset in the scrollable content = (text top − viewport top
+                    // in root space) + the match's y inside the text.
+                    val contentOffset = (textTopPx - containerTopPx) + box.top
+                    scrollState.animateScrollTo((contentOffset - 140f).toInt().coerceAtLeast(0))
+                    didScrollToMatch = true
                 }
             }
         }
@@ -143,6 +148,7 @@ fun DocumentDetailScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .onGloballyPositioned { containerTopPx = it.positionInRoot().y }
                 .verticalScroll(scrollState)
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -196,7 +202,7 @@ fun DocumentDetailScreen(
                 Text(
                     doc.ocrText.ifBlank { "No text was recognized in this document." },
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.onGloballyPositioned { textTopPx = it.positionInParent().y },
+                    modifier = Modifier.onGloballyPositioned { textTopPx = it.positionInRoot().y },
                 )
             } else {
                 ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
@@ -205,7 +211,7 @@ fun DocumentDetailScreen(
                         highlights = ranges,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .onGloballyPositioned { textTopPx = it.positionInParent().y },
+                            .onGloballyPositioned { textTopPx = it.positionInRoot().y },
                         onTextLayout = { textLayout = it },
                     )
                 }
