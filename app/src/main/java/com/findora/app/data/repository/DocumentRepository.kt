@@ -9,6 +9,7 @@ import com.findora.app.data.model.Document
 import com.findora.app.data.model.SearchResult
 import com.findora.app.data.ocr.OcrService
 import com.findora.app.data.search.EntityExtractor
+import com.findora.app.data.search.rankByRelevance
 import com.findora.app.data.search.toSearchResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -67,13 +68,22 @@ class DocumentRepository(
         imageStore.delete(document.imagePath)
     }
 
-    /** Field-aware full-text search with highlighted snippets. */
+    /**
+     * Field-aware search with highlighted snippets. Combines the FTS index
+     * (fast token-prefix matching) with a substring fallback (so mid-token
+     * digits/partial names are found too), then ranks by relevance.
+     */
     suspend fun search(query: String): List<SearchResult> {
         val terms = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         if (terms.isEmpty()) return emptyList()
+
         val ftsQuery = terms.joinToString(" ") { sanitizeToken(it) + "*" }
-        val hits = dao.search(ftsQuery)
-        return hits.map { it.toModel().toSearchResult(terms) }
+        // A malformed MATCH can throw; the LIKE fallback still covers the query.
+        val ftsHits = runCatching { dao.search(ftsQuery) }.getOrDefault(emptyList())
+        val likeHits = dao.searchLike(escapeLike(query.trim()))
+
+        val merged = (ftsHits + likeHits).distinctBy { it.id }.map { it.toModel() }
+        return rankByRelevance(merged, query, terms).map { it.toSearchResult(terms) }
     }
 
     // ---- helpers ----
@@ -81,6 +91,10 @@ class DocumentRepository(
     private fun sanitizeToken(token: String): String =
         // Strip FTS operators; keep alphanumerics so MATCH stays valid.
         token.replace(Regex("[^\\p{L}\\p{N}]"), "").ifBlank { token.take(1) }
+
+    private fun escapeLike(raw: String): String =
+        // Escape LIKE wildcards so user input is matched literally (ESCAPE '\').
+        raw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
     private fun DocumentEntity.toModel() = Document(
         id = id,

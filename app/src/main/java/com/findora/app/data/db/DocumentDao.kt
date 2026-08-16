@@ -44,6 +44,21 @@ abstract class DocumentDao {
     )
     abstract suspend fun search(ftsQuery: String): List<DocumentEntity>
 
+    /**
+     * Substring fallback for what FTS (token-prefix) misses — e.g. digits in the
+     * middle of an invoice number, or a partial name. [q] must already have its
+     * LIKE wildcards (`%` `_` `\`) escaped by the caller.
+     */
+    @Query(
+        """
+        SELECT * FROM documents
+        WHERE title LIKE '%' || :q || '%' ESCAPE '\'
+           OR ocrText LIKE '%' || :q || '%' ESCAPE '\'
+        ORDER BY createdAt DESC
+        """
+    )
+    abstract suspend fun searchLike(q: String): List<DocumentEntity>
+
     // ---- Writes (kept in sync with the FTS index) ----
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
