@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.findora.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         // Play Console registered this app under com.syedmomin.findora. Note this is
@@ -16,7 +16,7 @@ android {
         // authority (${applicationId}.androidx-startup) unique, which Play requires.
         applicationId = "com.syedmomin.findora"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         // CI overrides these (Play rejects duplicate versionCodes); fall back for local builds.
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = System.getenv("VERSION_NAME") ?: "1.0"
